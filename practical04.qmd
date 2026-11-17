@@ -3,3 +3,146 @@ title: "Untitled"
 format: html
 ---
 
+```{r}
+library(tidyverse) #install tidyverse (I already have installed tidyverse so I'll just open the library)
+```
+
+2. SETUP
+
+```{r}
+install.packages("tidytuesdayR")
+```
+
+```{r}
+many_penguins <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2026/2026-07-14/many_penguins.csv')
+```
+
+3. Get to know the data
+
+3.1 There are 93 rows and 14 columns, and each row is a different penguin
+
+3.2
+```{r}
+penguins <- many_penguins
+penguins |> count(species)
+```
+
+species                     n
+   <chr>                   <int>
+ 1 Aptenodytes forsteri        5
+ 2 Aptenodytes patagonicus     5
+ 3 Eudyptes chrysocome        10
+ 4 Eudyptes chrysolophus       5
+ 5 Eudyptes moseleyi           5
+ 6 Eudyptes pachyrhynchus      4
+ 7 Eudyptes robustus           4
+ 8 Eudyptes schlegeli          4
+ 9 Eudyptes sclateri           4
+10 Eudyptula minor             7
+11 Megadyptes antipodes        4
+12 Pygoscelis adeliae          5
+13 Pygoscelis antarcticus      8
+14 Pygoscelis papua            4
+15 Spheniscus demersus         5
+16 Spheniscus humboldti        5
+17 Spheniscus magellanicus     5
+18 Spheniscus mendiculus       4
+
+4. Filter and remove outliers
+4.1
+```{r}
+penguins |> ggplot(data = penguins,
+       mapping = aes(x = wing.length,
+                     y = beak.length_culmen,
+                     colour = genus)) +
+  geom_point()
+```
+
+Mainly the orange points (aptenodytes). Some yellow (eudyptes), but most yellow are within the range of the majority.
+
+4.2 
+
+```{r}
+penguins |> filter(wing.length > 150 & beak.length_culmen < 60) |> head() #I would say that they are all Eudyptes as I had described before, and just three penguins
+```
+
+A tibble: 3 × 14
+  species           genus shortname sex   beak.length_culmen beak.length_nares
+  <chr>             <chr> <chr>     <chr>              <dbl>             <dbl>
+1 Eudyptes pachyrh… Eudy… E. pachy… F                   47.3              33.5
+2 Eudyptes pachyrh… Eudy… E. pachy… F                   46.7              35.5
+3 Eudyptes pachyrh… Eudy… E. pachy… M                   55.4              39.8
+
+#I saw that you asked for species, and for 4 outliers, so I guess for the next question I should re-do the 4.2 and consider one of the Aptenodytes as a outlier as well
+
+```{r}
+penguins |> filter(wing.length > 150 & beak.length_culmen < 70) |> head()
+```
+
+4.3
+```{r}
+penguins_clean <- penguins |> select(species, genus, wing.length, beak.length_culmen) |> na.omit(wing.length=NA) |> filter(!(wing.length > 150 & beak.length_culmen < 70))
+```
+
+#I removed the outliers because aside from being different from the "main" population, they were also very different from their species.
+
+5.Draft figure
+```{r}
+penguins_clean |> ggplot(data = penguins_clean,
+       mapping = aes(x = wing.length,
+                     y = beak.length_culmen,
+                     colour = genus)) +
+  geom_point()
+```
+
+#As we can see from the ggplot, the penguins that seem to have higher beak lenght seem to also have higher wingh lenght, being conserved within each species, which make sense because we expect that "bigger" penguins have bigger wings and bigger beaks.
+
+6.Summarise by species
+
+```{r}
+species_summary <- penguins_clean |> group_by(species, genus) |> summarise(n = n(),
+          mean_wing_length = mean(wing.length, na.rm = TRUE),
+          mean_beak_length = mean(beak.length_culmen, na.rm = TRUE))
+
+species_summary
+```
+
+#Here is the table that the function above gives. I don't fully understand the function n=n so maybe I could ask you tomorrow during class.
+
+species                 genus           n mean_wing_length mean_beak_length
+   <chr>                   <chr>       <int>            <dbl>            <dbl>
+ 1 Aptenodytes forsteri    Aptenodytes     4            182.             101. 
+ 2 Aptenodytes patagonicus Aptenodytes     4            167.             105. 
+ 3 Eudyptes chrysocome     Eudyptes        8             97.9             49.5
+ 4 Eudyptes chrysolophus   Eudyptes        4            116.              61.5
+ 5 Eudyptes moseleyi       Eudyptes        4            102.              51.8
+ 6 Eudyptes pachyrhynchus  Eudyptes        1             91.3             48.2
+ 7 Eudyptes robustus       Eudyptes        4             97.8             56.1
+ 8 Eudyptes schlegeli      Eudyptes        4            121               70.7
+ 9 Eudyptes sclateri       Eudyptes        4            111.              66.2
+10 Eudyptula minor         Eudyptula       4             67.2             46.4
+11 Megadyptes antipodes    Megadyptes      4            128.              64.7
+12 Pygoscelis adeliae      Pygoscelis      5             94.5             59.7
+13 Pygoscelis antarcticus  Pygoscelis      4            100.              62.4
+14 Pygoscelis papua        Pygoscelis      4            126.              64.8
+15 Spheniscus demersus     Spheniscus      4             98.5             61.5
+16 Spheniscus humboldti    Spheniscus      4            105.              62.6
+17 Spheniscus magellanicus Spheniscus      5            110.              60.2
+18 Spheniscus mendiculus   Spheniscus      4             82.8             63.9
+
+
+```{r}
+ggplot(data = species_summary,
+       mapping = aes(x = mean_wing_length,
+                     y = mean_beak_length,
+                     colour = genus)) +
+                   labs(title = "Species summary final exercise",
+       x = "mean_wing_length (mm)",
+       y = "mean_beak_length (mm)",
+       colour = "genus") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold")) +
+  geom_point()
+```
+
+#Yeyyyy concluded! It was fun and difficult. I still have the question of n=n(). I'll try to remember to ask you tomorrow.
